@@ -2,101 +2,160 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Wort und Satz Umformer</title>
+<title>Wort & Satz Umformer ✨</title>
 
 <style>
 :root {
-  --bg: #111;
+  --bg1: #1a2a6c;
+  --bg2: #b21f1f;
+  --bg3: #fdbb2d;
   --fg: #fff;
+  --accent: #00ffd5;
 }
 
 body {
-  background: var(--bg);
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(-45deg, var(--bg1), var(--bg2), var(--bg3));
+  background-size: 400% 400%;
+  animation: gradientMove 18s ease infinite;
   color: var(--fg);
-  font-family: Arial, sans-serif;
-  padding: 30px;
+  font-family: "Segoe UI", Arial, sans-serif;
   text-align: center;
+  padding: 30px;
+  overflow-x: hidden;
 }
 
-body.mobile {
-  font-size: 18px;
+@keyframes gradientMove {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+h1 {
+  font-size: 42px;
+  cursor: pointer;
+  text-shadow: 0 0 20px rgba(0,0,0,.4);
+}
+
+.container {
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(10px);
+  border-radius: 18px;
+  padding: 25px;
+  max-width: 700px;
+  margin: auto;
+  box-shadow: 0 0 30px rgba(0,0,0,.4);
 }
 
 input, select {
-  padding: 12px;
+  padding: 14px;
   font-size: 16px;
   width: 340px;
   max-width: 95%;
+  border-radius: 10px;
+  border: none;
+  margin: 6px;
 }
 
 button {
-  padding: 10px 14px;
+  padding: 12px 18px;
   font-size: 15px;
-  margin: 5px;
+  border-radius: 12px;
+  border: none;
   cursor: pointer;
+  margin: 6px;
+  background: linear-gradient(135deg, #00ffd5, #00b3ff);
+  color: #000;
+  font-weight: bold;
+  transition: transform .15s, box-shadow .15s;
+}
+
+button:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 20px rgba(0,255,213,.7);
 }
 
 .result {
   margin-top: 20px;
-  font-size: 26px;
+  font-size: 28px;
   font-weight: bold;
   word-wrap: break-word;
+  animation: pop .25s ease;
+}
+
+@keyframes pop {
+  from { transform: scale(.85); opacity: .4; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 .history {
   margin-top: 30px;
-  max-width: 600px;
-  margin-inline: auto;
   text-align: left;
 }
 
 .history-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid rgba(255,255,255,.2);
   padding: 6px 0;
   font-size: 14px;
 }
 
-.history-item span {
+.delete {
+  color: #ff7070;
   cursor: pointer;
 }
 
-.delete {
-  color: #ff5555;
-  cursor: pointer;
-  margin-left: 10px;
+canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.rainbow {
+  animation: rainbow 2s linear infinite;
+}
+
+@keyframes rainbow {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
 }
 </style>
 </head>
 
 <body>
 
-<h1>Wort- und Satz-Umformer</h1>
+<canvas id="particles"></canvas>
 
-<input id="input" placeholder="Wort oder Satz eingeben">
-<br>
+<h1 id="title">Wort- & Satz-Umformer</h1>
 
-<select id="mode">
-  <option value="i">I-Modus</option>
-  <option value="u">U-Modus</option>
-  <option value="o">O-Modus</option>
-  <option value="chaos">Chaos-Modus</option>
-</select>
-<br>
+<div class="container">
+  <input id="input" placeholder="Wort oder Satz eingeben">
+  <br>
 
-<button onclick="convert()">Umformen</button>
-<button onclick="pasteFromClipboard()">Paste</button>
-<button onclick="copyResult()">Copy</button>
-<button onclick="speak()">Vorlesen</button>
+  <select id="mode">
+    <option value="i">I-Modus</option>
+    <option value="u">U-Modus</option>
+    <option value="o">O-Modus</option>
+    <option value="chaos">Chaos-Modus 😈</option>
+  </select>
 
-<div class="result" id="result"></div>
+  <br>
 
-<div class="history">
-  <h3>Verlauf</h3>
-  <div id="history"></div>
-  <button onclick="clearHistory()">Verlauf löschen</button>
+  <button onclick="convert()">Umformen</button>
+  <button onclick="pasteFromClipboard()">Paste</button>
+  <button onclick="copyResult()">Copy</button>
+  <button onclick="speak()">Vorlesen</button>
+
+  <div class="result" id="result"></div>
+
+  <div class="history">
+    <h3>Verlauf</h3>
+    <div id="history"></div>
+    <button onclick="clearHistory()">Verlauf löschen</button>
+  </div>
 </div>
 
 <script>
@@ -104,34 +163,19 @@ const input = document.getElementById("input");
 const resultDiv = document.getElementById("result");
 const historyDiv = document.getElementById("history");
 const modeSelect = document.getElementById("mode");
+const title = document.getElementById("title");
 
 let history = JSON.parse(localStorage.getItem("history") || "[]");
 
-function isMobileDevice() {
-  return /Mobi|Android|iPhone/i.test(navigator.userAgent);
-}
-
-if (isMobileDevice()) {
-  document.body.classList.add("mobile");
-}
-
+/* -------- Wort Logik -------- */
 function transformWord(word, mode) {
-  if (mode === "chaos") {
-    return word.replace(/[aeiouäöü]/gi, "i");
-  }
-
+  if (mode === "chaos") return word.replace(/[aeiouäöü]/gi, "i");
   const lower = word.toLowerCase();
   if (lower.endsWith(mode)) return word;
-
   if (lower.endsWith("er") || lower.endsWith("en") || lower.endsWith("el"))
     return word.slice(0, -2) + mode;
-
-  if (lower.endsWith("e"))
+  if (lower.endsWith("e") || /[aeiouäöü]$/.test(lower))
     return word.slice(0, -1) + mode;
-
-  if (/[aeiouäöü]$/.test(lower))
-    return word.slice(0, -1) + mode;
-
   return word + mode;
 }
 
@@ -149,26 +193,23 @@ function convert() {
 
   history.unshift({ original: text, result: converted });
   history = history.slice(0, 40);
-
   localStorage.setItem("history", JSON.stringify(history));
   renderHistory();
+
+  spawnConfetti();
 }
 
+/* -------- Verlauf -------- */
 function renderHistory() {
   historyDiv.innerHTML = "";
   history.forEach((item, i) => {
     const div = document.createElement("div");
     div.className = "history-item";
     div.innerHTML = `
-      <span onclick="reuse(${i})">${item.original} → ${item.result}</span>
-      <span class="delete" onclick="deleteItem(${i})">X</span>
-    `;
+      <span onclick="input.value='${item.original.replace(/'/g,"")}';">${item.original} → ${item.result}</span>
+      <span class="delete" onclick="deleteItem(${i})">X</span>`;
     historyDiv.appendChild(div);
   });
-}
-
-function reuse(i) {
-  input.value = history[i].original;
 }
 
 function deleteItem(i) {
@@ -199,8 +240,60 @@ function speak() {
   speechSynthesis.speak(u);
 }
 
-input.addEventListener("keydown", e => {
-  if (e.key === "Enter") convert();
+/* -------- Partikel -------- */
+const canvas = document.getElementById("particles");
+const ctx = canvas.getContext("2d");
+let particles = [];
+
+function resize() {
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+}
+resize();
+addEventListener("resize", resize);
+
+function spawn(x, y, amount = 12) {
+  for (let i = 0; i < amount; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - .5) * 4,
+      vy: (Math.random() - .5) * 4,
+      life: 40
+    });
+  }
+}
+
+function spawnConfetti() {
+  spawn(innerWidth / 2, innerHeight / 2, 20);
+}
+
+function animate() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life--;
+    ctx.fillStyle = "rgba(255,255,255,.8)";
+    ctx.fillRect(p.x, p.y, 2, 2);
+  });
+  particles = particles.filter(p => p.life > 0);
+  requestAnimationFrame(animate);
+}
+animate();
+
+/* -------- Easter Eggs -------- */
+title.addEventListener("click", e => {
+  spawn(e.clientX, e.clientY, 25);
+});
+
+const konami = ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"];
+let buffer = [];
+addEventListener("keydown", e => {
+  buffer.push(e.key);
+  buffer.splice(-konami.length - 1, buffer.length - konami.length);
+  if (konami.every((k,i)=>k===buffer[i])) {
+    document.body.classList.toggle("rainbow");
+  }
 });
 
 renderHistory();
@@ -208,4 +301,3 @@ renderHistory();
 
 </body>
 </html>
-

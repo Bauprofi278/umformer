@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Wort und Satz Umformer</title>
+
+<style>
+:root {
+  --bg: #111;
+  --fg: #fff;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: Arial, sans-serif;
+  padding: 30px;
+  text-align: center;
+}
+
+body.mobile {
+  font-size: 18px;
+}
+
+input, select {
+  padding: 12px;
+  font-size: 16px;
+  width: 340px;
+  max-width: 95%;
+}
+
+button {
+  padding: 10px 14px;
+  font-size: 15px;
+  margin: 5px;
+  cursor: pointer;
+}
+
+.result {
+  margin-top: 20px;
+  font-size: 26px;
+  font-weight: bold;
+  word-wrap: break-word;
+}
+
+.history {
+  margin-top: 30px;
+  max-width: 600px;
+  margin-inline: auto;
+  text-align: left;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #333;
+  padding: 6px 0;
+  font-size: 14px;
+}
+
+.history-item span {
+  cursor: pointer;
+}
+
+.delete {
+  color: #ff5555;
+  cursor: pointer;
+  margin-left: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Wort- und Satz-Umformer</h1>
+
+<input id="input" placeholder="Wort oder Satz eingeben">
+<br>
+
+<select id="mode">
+  <option value="i">I-Modus</option>
+  <option value="u">U-Modus</option>
+  <option value="o">O-Modus</option>
+  <option value="chaos">Chaos-Modus</option>
+</select>
+<br>
+
+<button onclick="convert()">Umformen</button>
+<button onclick="pasteFromClipboard()">Paste</button>
+<button onclick="copyResult()">Copy</button>
+<button onclick="speak()">Vorlesen</button>
+
+<div class="result" id="result"></div>
+
+<div class="history">
+  <h3>Verlauf</h3>
+  <div id="history"></div>
+  <button onclick="clearHistory()">Verlauf löschen</button>
+</div>
+
+<script>
+const input = document.getElementById("input");
+const resultDiv = document.getElementById("result");
+const historyDiv = document.getElementById("history");
+const modeSelect = document.getElementById("mode");
+
+let history = JSON.parse(localStorage.getItem("history") || "[]");
+
+function isMobileDevice() {
+  return /Mobi|Android|iPhone/i.test(navigator.userAgent);
+}
+
+if (isMobileDevice()) {
+  document.body.classList.add("mobile");
+}
+
+function transformWord(word, mode) {
+  if (mode === "chaos") {
+    return word.replace(/[aeiouäöü]/gi, "i");
+  }
+
+  const lower = word.toLowerCase();
+  if (lower.endsWith(mode)) return word;
+
+  if (lower.endsWith("er") || lower.endsWith("en") || lower.endsWith("el"))
+    return word.slice(0, -2) + mode;
+
+  if (lower.endsWith("e"))
+    return word.slice(0, -1) + mode;
+
+  if (/[aeiouäöü]$/.test(lower))
+    return word.slice(0, -1) + mode;
+
+  return word + mode;
+}
+
+function transformSentence(text) {
+  const mode = modeSelect.value;
+  return text.replace(/[A-Za-zÄÖÜäöüß]+/g, w => transformWord(w, mode));
+}
+
+function convert() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  const converted = transformSentence(text);
+  resultDiv.textContent = converted;
+
+  history.unshift({ original: text, result: converted });
+  history = history.slice(0, 40);
+
+  localStorage.setItem("history", JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  historyDiv.innerHTML = "";
+  history.forEach((item, i) => {
+    const div = document.createElement("div");
+    div.className = "history-item";
+    div.innerHTML = `
+      <span onclick="reuse(${i})">${item.original} → ${item.result}</span>
+      <span class="delete" onclick="deleteItem(${i})">X</span>
+    `;
+    historyDiv.appendChild(div);
+  });
+}
+
+function reuse(i) {
+  input.value = history[i].original;
+}
+
+function deleteItem(i) {
+  history.splice(i, 1);
+  localStorage.setItem("history", JSON.stringify(history));
+  renderHistory();
+}
+
+function clearHistory() {
+  history = [];
+  localStorage.removeItem("history");
+  renderHistory();
+}
+
+function copyResult() {
+  if (resultDiv.textContent)
+    navigator.clipboard.writeText(resultDiv.textContent);
+}
+
+async function pasteFromClipboard() {
+  input.value = await navigator.clipboard.readText();
+}
+
+function speak() {
+  if (!resultDiv.textContent) return;
+  const u = new SpeechSynthesisUtterance(resultDiv.textContent);
+  u.lang = "de-DE";
+  speechSynthesis.speak(u);
+}
+
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter") convert();
+});
+
+renderHistory();
+</script>
+
+</body>
+</html>
+

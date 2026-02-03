@@ -2,98 +2,123 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Wort- und Satz Umformer</title>
+<title>Wort- & Satz-Umformer</title>
 
 <style>
 :root {
-  --bg: #000;
-  --fg: #fff;
+  --bg: #050505;
+  --fg: #ffffff;
   --accent: #00ffd5;
 }
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: radial-gradient(circle at top, #0b0b0b, #000);
   color: var(--fg);
-  font-family: Arial, sans-serif;
-  padding: 30px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 32px;
   text-align: center;
   overflow-x: hidden;
 }
 
 h1 {
   font-size: 38px;
-  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
 }
 
 .container {
-  background: rgba(255,255,255,0.04);
-  border-radius: 16px;
-  padding: 25px;
-  max-width: 700px;
+  background: rgba(255,255,255,0.035);
+  border-radius: 20px;
+  padding: 28px;
+  max-width: 720px;
   margin: auto;
-  box-shadow: 0 0 25px rgba(0,0,0,.6);
-  backdrop-filter: blur(6px);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.05),
+    0 20px 40px rgba(0,0,0,0.6);
+  backdrop-filter: blur(10px);
 }
 
 input, select {
-  padding: 12px;
+  padding: 13px 14px;
   font-size: 16px;
-  width: 340px;
+  width: 360px;
   max-width: 95%;
-  border-radius: 10px;
+  border-radius: 12px;
   border: none;
-  margin: 6px;
+  margin: 7px;
+  background: #111;
+  color: white;
 }
 
+select { cursor: pointer; }
+
 button {
-  padding: 10px 16px;
+  padding: 11px 18px;
   font-size: 15px;
-  margin: 5px;
-  border-radius: 10px;
+  margin: 6px;
+  border-radius: 12px;
   border: none;
   cursor: pointer;
-  background: var(--accent);
+  background: linear-gradient(135deg, #00ffd5, #00b8ff);
   color: #000;
-  font-weight: bold;
-  transition: transform .15s, box-shadow .15s;
+  font-weight: 600;
+  transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
 }
 
 button:hover {
-  transform: scale(1.07);
-  box-shadow: 0 0 18px rgba(0,255,213,.6);
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+  box-shadow: 0 10px 22px rgba(0,255,213,.35);
+}
+
+button:active {
+  transform: scale(0.97);
 }
 
 .result {
-  margin-top: 20px;
-  font-size: 26px;
-  font-weight: bold;
-  word-wrap: break-word;
+  margin-top: 22px;
+  font-size: 28px;
+  font-weight: 700;
   animation: pop .25s ease;
 }
 
 @keyframes pop {
-  from { transform: scale(.85); opacity: .4; }
+  from { transform: scale(.9); opacity: .3; }
   to { transform: scale(1); opacity: 1; }
 }
 
 .history {
-  margin-top: 30px;
+  margin-top: 32px;
   max-width: 600px;
   margin-inline: auto;
   text-align: left;
 }
 
+.history h3 {
+  opacity: .85;
+  margin-bottom: 10px;
+}
+
 .history-item {
   display: flex;
   justify-content: space-between;
-  border-bottom: 1px solid #222;
-  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+  padding: 7px 0;
   font-size: 14px;
 }
 
+.history-item span:first-child {
+  cursor: pointer;
+  opacity: .9;
+}
+
+.history-item span:first-child:hover {
+  opacity: 1;
+}
+
 .delete {
-  color: #ff6666;
+  color: #ff7777;
   cursor: pointer;
 }
 
@@ -138,6 +163,7 @@ canvas {
 </div>
 
 <script>
+/* ---------- Wörter ---------- */
 const input = document.getElementById("input");
 const resultDiv = document.getElementById("result");
 const historyDiv = document.getElementById("history");
@@ -145,7 +171,6 @@ const modeSelect = document.getElementById("mode");
 
 let history = JSON.parse(localStorage.getItem("history") || "[]");
 
-/* Wort Logik */
 function transformWord(word, mode) {
   if (mode === "chaos") return word.replace(/[aeiouäöü]/gi, "i");
   const lower = word.toLowerCase();
@@ -179,7 +204,9 @@ function renderHistory() {
     const div = document.createElement("div");
     div.className = "history-item";
     div.innerHTML = `
-      <span onclick="input.value='${item.original.replace(/'/g,"")}';">${item.original} → ${item.result}</span>
+      <span onclick="input.value='${item.original.replace(/'/g,"")}';">
+        ${item.original} → ${item.result}
+      </span>
       <span class="delete" onclick="deleteItem(${i})">X</span>
     `;
     historyDiv.appendChild(div);
@@ -217,6 +244,14 @@ function speak() {
 /* ---------- Partikel ---------- */
 const canvas = document.getElementById("particles");
 const ctx = canvas.getContext("2d");
+
+const colors = [
+  "0,255,213",   // cyan
+  "120,140,255", // blue
+  "170,120,255", // purple
+  "90,255,180"   // mint
+];
+
 let particles = [];
 
 function resize() {
@@ -227,26 +262,46 @@ resize();
 addEventListener("resize", resize);
 
 function spawnParticle() {
-  if (particles.length > 120) return; // HARD LIMIT
+  if (particles.length > 180) return;
+
+  const typeRand = Math.random();
+  const type = typeRand > 0.9 ? "line" : typeRand > 0.97 ? "glow" : "dot";
+
   particles.push({
+    type,
     x: Math.random() * canvas.width,
-    y: canvas.height + 10,
+    y: canvas.height + 20,
     size: Math.random() * 2 + 1,
-    speed: Math.random() * 0.6 + 0.2,
-    alpha: Math.random() * 0.6 + 0.2
+    speed: Math.random() * 0.7 + 0.2,
+    alpha: Math.random() * 0.5 + 0.25,
+    color: colors[Math.floor(Math.random() * colors.length)]
   });
 }
 
-setInterval(spawnParticle, 120);
+setInterval(spawnParticle, 90);
 
 function animate() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   particles.forEach(p => {
     p.y -= p.speed;
-    ctx.fillStyle = `rgba(0,255,213,${p.alpha})`;
-    ctx.fillRect(p.x, p.y, p.size, p.size);
+    const glow = p.type === "glow" ? 12 : 0;
+
+    if (p.type === "line") {
+      ctx.strokeStyle = `rgba(${p.color},${p.alpha})`;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x, p.y + 10);
+      ctx.stroke();
+    } else {
+      ctx.shadowBlur = glow;
+      ctx.shadowColor = `rgba(${p.color},${p.alpha})`;
+      ctx.fillStyle = `rgba(${p.color},${p.alpha})`;
+      ctx.fillRect(p.x, p.y, p.size, p.size);
+      ctx.shadowBlur = 0;
+    }
   });
-  particles = particles.filter(p => p.y > -20);
+
+  particles = particles.filter(p => p.y > -40);
   requestAnimationFrame(animate);
 }
 animate();
